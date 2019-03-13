@@ -1,3 +1,4 @@
+#!/usr/bin/env python2.7
 # This file was created starting the cookie2.py from Think Bayes
 # That code implements a simple Naive Bayes model where there is only one feature, namely
 # the flavor of the cookie that was selected from a bowl.
@@ -9,7 +10,7 @@
 # You will also modify read_data
 # Specific instructions about how to do the modifications are given in the code and comments
 # for those functions.
-# You will turn in your modified version of this file as well as a text file with the output 
+# You will turn in your modified version of this file as well as a text file with the output
 # that was printed when you ran this.
 
 from thinkbayes import Pmf
@@ -22,10 +23,10 @@ from collections import defaultdict
 classval = 'play'
 smoothing = 0
 
-# These global variables keep track of the counts for each feature value in connection with 
+# These global variables keep track of the counts for each feature value in connection with
 # each classvalue (in countdict) as well as the full list of feature values for each feature
 # in the order in which they were encountered in the data file (in featuredict)
-# featlist is the full list of features in the order in which the corresponding columns 
+# featlist is the full list of features in the order in which the corresponding columns
 # appear in the data file
 # classpos is the position in the feature list where the class value is found
 
@@ -46,7 +47,7 @@ def read_data ():
     global countdict
     global featuredict
     global featlist
-    
+
     pos = 0
     with open('weather.csv', 'rb') as csvfile:
         datareader = csv.reader(csvfile, delimiter=',', quotechar='|')
@@ -61,34 +62,38 @@ def read_data ():
             else:
                 localclassval = row[classpos]
                 countdict[localclassval] += 1
-                    
+
                 for x in range(len(featlist)):
                     if row[x] in featuredict[featlist[x]]:
                         countdict[conc(featlist[x],row[x],localclassval)] += 1
                     else:
                         featuredict[featlist[x]].append(row[x])
                         countdict[conc(featlist[x],row[x],localclassval)] = 1
-                                 
+    # What should we add?
+    # featuredict['windy'].append('')
+    # featuredict['humidity'].append('')
+    # featuredict['outlook'].append('')
+    # featuredict['temperature'].append('')
 
-# this function computes the conditional probability of the feature called feat having 
+
+# this function computes the conditional pro bability of the feature called feat having
 # the value featval given that the class value is classval
 def condprob (classval, feat, featval):
 ## Modify this function to use the value of smoothing
     total = 0  # This will be the total number of instances of class value = classval
     val = 0 # this will be the number of times that feat was of value featval when class was classval
-    
-    
+    assert((smoothing == 0 or smoothing == 1) and type(smoothing) == int)
+
     for fval in featuredict[feat]:
-        count = countdict[conc(feat,fval,classval)] 
+        count = countdict[conc(feat,fval,classval)] + smoothing
         total += count
         if fval == featval:
             val = count
-            
+
     # if featval never occred in the dataset, you need to handle this condition here
     if not(featval in featuredict[feat]):
-        total += 0
-        val = 0
-        
+        total += smoothing
+        val = smoothing
     val = float(val)/total # here is where you finally compute the conditional probability
 
     return val
@@ -100,7 +105,7 @@ class Weather(Pmf):
     def __init__(self, hypos):
         """Initialize self.
 
-        hypos: whether you play tennis or not 
+        hypos: whether you play tennis or not
         """
         Pmf.__init__(self)
         for hypo in hypos:
@@ -127,7 +132,7 @@ class Weather(Pmf):
         data: feature values for outlook, temperature, humidity, and windy
         hypo: whether you play tennis or not
         """
-        like = 1
+        like = 1.0
         # in the Cookie problem, there was only one feature.  So the likelihood before
         # it multiplied by the prior probability was just the conditional probability
         # of the feature value given the class value, which you saw in the mix variable
@@ -136,39 +141,43 @@ class Weather(Pmf):
         # according to what we discussed in class and you saw in the Witten book for
         # computing the likelihood for the play tennis dataset
 
-        like = condprob(hypo, featlist[0], data[0]) # this is the conditional probability of
-                                                    # the value (in data) of the feature (in
-                                                    # featlist) given the class value (in hypo)
-                                                    # note that featlist lists all of the features
-                                                    # and data lists all the values for this instance
+        # Perform condprob on each element in featlist except classval and take the product of the results
+        like_list = list(map(lambda x:condprob(hypo, featlist[x], data[x]), range(len(featlist[:featlist.index(classval)]+featlist[featlist.index(classval)+1:]))))
+        for index in like_list:
+            like *= index
+                # this is the conditional probability of
+                # the value (in data) of the feature (in
+                # featlist) given the class value (in hypo)
+                # note that featlist lists all of the features
+                # and data lists all the values for this instance
         return like
 
 # This function computes the probability for each class value for the data point given
 def test_instance (hypos, data):
     pmf = Weather(hypos)
     pmf.Update(data)
-    
+
     print "--------------------------"
     print data
-    if smoothing: 
+    if smoothing:
         print "Smoothing"
-    else: 
+    else:
         print "No Smoothing"
-        
+
     for hypo, prob in pmf.Items():
         print hypo, prob
 
 # This function implements the instructions for the assignment.
 # It reads the play tennis data, computes all the counts, and then
 # evaluates the probability for each possible class value with and
-# without smoothing for each of the 4 test instances given in the 
+# without smoothing for each of the 4 test instances given in the
 # assignment
 def main():
     global smoothing
-    
-    read_data() 
-    hypos = featuredict[classval]    
-    
+
+    read_data()
+    hypos = featuredict[classval]
+
     smoothing = 0
     test_instance(hypos, ['overcast','hot','normal','TRUE','?'])
     test_instance(hypos, ['rainy','hot','high','FALSE','?'])
@@ -179,7 +188,7 @@ def main():
     test_instance(hypos, ['rainy','hot','high','FALSE','?'])
     test_instance(hypos, ['overcast','cool','normal','TRUE','?'])
     test_instance(hypos, ['rainy','mild','low','FALSE','?'])
-    
-    
+
+
 if __name__ == '__main__':
     main()

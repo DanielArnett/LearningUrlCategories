@@ -73,21 +73,23 @@ def read_data ():
 # this function computes the conditional probability of the feature called feat having 
 # the value featval given that the class value is classval
 def condprob (classval, feat, featval):
+    assert(smoothing == 0 or smoothing == 1)
 ## Modify this function to use the value of smoothing
     total = 0  # This will be the total number of instances of class value = classval
     val = 0 # this will be the number of times that feat was of value featval when class was classval
     
     
     for fval in featuredict[feat]:
-        count = countdict[conc(feat,fval,classval)] 
+        count = countdict[conc(feat,fval,classval)]
+        count += smoothing
         total += count
         if fval == featval:
             val = count
             
     # if featval never occred in the dataset, you need to handle this condition here
     if not(featval in featuredict[feat]):
-        total += 0
-        val = 0
+        total += smoothing
+        val = smoothing
         
     val = float(val)/total # here is where you finally compute the conditional probability
 
@@ -127,6 +129,7 @@ class Weather(Pmf):
         data: feature values for outlook, temperature, humidity, and windy
         hypo: whether you play tennis or not
         """
+        assert(smoothing == 0 or smoothing == 1)
         like = 1
         # in the Cookie problem, there was only one feature.  So the likelihood before
         # it multiplied by the prior probability was just the conditional probability
@@ -136,6 +139,7 @@ class Weather(Pmf):
         # according to what we discussed in class and you saw in the Witten book for
         # computing the likelihood for the play tennis dataset
 
+        like = list()
         like = condprob(hypo, featlist[0], data[0]) # this is the conditional probability of
                                                     # the value (in data) of the feature (in
                                                     # featlist) given the class value (in hypo)
