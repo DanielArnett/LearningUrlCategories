@@ -3,9 +3,10 @@ import os
 import math
 import numpy as np
 import string
+import pandas as pd
 
-source_data_path = './final_set.csv'
-output_path = './final_set_preprocessed.csv'
+source_data_path = './train_set.csv'
+output_path = './train_set_preprocessed_distributed.csv'
 try:
     os.unlink(output_path)
     print('Deleted ' + output_path)
@@ -27,7 +28,7 @@ batch_size = 10000
 
 def open_csv_as_numpy():
     csv_as_list = list()
-    with open(source_data_path, 'rb') as fin:
+    with open(source_data_path, 'r') as fin:
         reader = csv.reader(fin, dialect=csv.excel)
         csv_as_list = list(reader)
     # reader = unicode_csv_reader(open(source_data_path))
@@ -36,6 +37,13 @@ def open_csv_as_numpy():
 
 
 csv_as_ndarray = open_csv_as_numpy()
+csv_as_df = pd.DataFrame(csv_as_ndarray[1:]).sort_values([2])
+size = csv_as_df.groupby(2).count().min()[0]        # sample size
+replace = False  # with replacement
+fn = lambda obj: obj.loc[np.random.choice(obj.index, size, replace),:]
+csv_as_df = csv_as_df.groupby(2, as_index=False).apply(fn)
+csv_as_ndarray = np.vstack((csv_as_ndarray[0], csv_as_df))
+
 new_shape = [batch_size, class_names.shape[0]]
 formatted_ndarray = np.chararray(new_shape)
 formatted_ndarray[:] = '0'
@@ -67,5 +75,8 @@ for i in range(num_of_batches - 1):
                 print('Using string: ' + new_url)
                 csv_as_ndarray[lo:hi, 1][index] = new_url
         output_buffer = np.concatenate((csv_as_ndarray[lo:hi, :2], output_buffer), axis=1)
+    urls = pd.Series(output_buffer[1:, 1])
+    urls = urls.str.lstrip('http://').str.lstrip('https://').str.lstrip('www.')
+    output_buffer[1:, 1] = urls.to_numpy(output_buffer.dtype)
     np.savetxt(fout, output_buffer, fmt='%s', delimiter=",")
 
